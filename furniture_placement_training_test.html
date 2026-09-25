@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 101: Critical Ergonomics & Power Infrastructure Preservation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .font-fun {
+      font-family: 'Bungee', cursive;
+    }
+
+    .font-marker {
+      font-family: 'Permanent Marker', cursive;
+    }
+
+    /* Wall and floor textures */
+    .wall-surface {
+      background: radial-gradient(circle at 50% 30%, #fefcf3 0%, #fae8c8 70%, #edd3a4 100%);
+      position: relative;
+    }
+
+    .floor-wood {
+      background: repeating-linear-gradient(
+        90deg,
+        #b4632f,
+        #b4632f 52px,
+        #a15525 54px,
+        #8f4b20 55px,
+        #a15525 106px
+      );
+      box-shadow: inset 0 12px 20px rgba(0, 0, 0, 0.28);
+    }
+
+    /* Screen shake on failure */
+    @keyframes screen-quake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      15% { transform: translate(-9px, 7px) rotate(-1.2deg); }
+      30% { transform: translate(8px, -7px) rotate(1.2deg); }
+      45% { transform: translate(-7px, -4px) rotate(-1.5deg); }
+      60% { transform: translate(6px, 5px) rotate(1deg); }
+      75% { transform: translate(-4px, 2px) rotate(0deg); }
+    }
+    .shake-active {
+      animation: screen-quake 0.6s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    /* Outlet subtle attention beacon */
+    @keyframes subtle-beacon {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.4); opacity: 0.15; }
+    }
+    .beacon-ring {
+      animation: subtle-beacon 2.2s infinite ease-out;
+    }
+
+    /* Draggable Sofa controls */
+    #sofa-container {
+      cursor: grab;
+      touch-action: none;
+      transition: filter 0.15s ease, transform 0.08s ease-out;
+    }
+    #sofa-container:active {
+      cursor: grabbing;
+      filter: drop-shadow(0 22px 24px rgba(0,0,0,0.38));
+    }
+
+    /* Confetti canvas */
+    #confetti-canvas {
+      pointer-events: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 40;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen text-slate-800 flex flex-col items-center justify-between p-3 md:p-6 overflow-x-hidden">
+
+  <!-- Header Banner -->
+  <header class="w-full max-w-5xl bg-amber-400 border-4 border-black rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 mb-3 text-center relative overflow-hidden">
+    <div class="absolute -top-3 -right-4 bg-red-600 text-white font-bold text-xs uppercase px-8 py-2 rotate-12 shadow-sm border-2 border-black tracking-widest font-fun">
+      MANDATORY REGULATION
+    </div>
+    <div class="inline-block bg-black text-amber-300 font-bold px-3 py-1 rounded-md text-xs uppercase tracking-wider mb-1 font-fun">
+      Residential Ergonomics & Power Defense
+    </div>
+    <h1 class="text-2xl md:text-3xl font-extrabold text-black uppercase tracking-tight font-fun">
+      Module 101: Do NOT Suffocate The Outlet!
+    </h1>
+    <p class="text-sm md:text-base font-semibold text-slate-900 max-w-2xl mx-auto mt-1">
+      Drag & drop the sofa along the living room wall. Rule #1 of civil society: 
+      <span class="text-red-700 underline font-extrabold">Full and unobstructed access to the standard 120V duplex outlet.</span>
+    </p>
+  </header>
+
+  <!-- Interactive Room Viewport -->
+  <main class="w-full max-w-5xl flex-1 flex flex-col items-center justify-center relative w-full">
+    
+    <div id="room-viewport" class="relative w-full h-[470px] md:h-[530px] rounded-3xl border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col select-none">
+      
+      <!-- Canvas for celebration confetti -->
+      <canvas id="confetti-canvas"></canvas>
+
+      <!-- Blank Cartoon Wall -->
+      <div id="wall" class="wall-surface relative flex-1 w-full overflow-hidden">
+        
+        <!-- Whimsical Wall Decor Poster -->
+        <div class="absolute top-6 left-10 w-28 h-24 border-4 border-amber-950 bg-amber-100 rounded-lg shadow-md rotate-[-2.5deg] hidden sm:flex flex-col items-center justify-center p-2 opacity-85 pointer-events-none">
+          <span class="text-2xl">⚡📱</span>
+          <span class="text-[9px] font-bold text-amber-950 font-fun text-center mt-1">100% BATTERY OR RIOT</span>
+        </div>
+
+        <!-- Realistic Proportion U.S. Duplex Outlet (NEMA 5-15) mounted just above baseboard -->
+        <div id="outlet-anchor" class="absolute bottom-1 right-28 md:right-48 z-10 flex flex-col items-center group">
+          
+          <!-- Indicator Callout Flag -->
+          <div id="outlet-radar" class="absolute -top-9 flex flex-col items-center pointer-events-none transition-opacity duration-200">
+            <span class="bg-yellow-300 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full border-2 border-black font-fun shadow-sm whitespace-nowrap animate-bounce">
+              ⚡ 120V OUTLET
+            </span>
+            <div class="w-2 h-2 bg-yellow-300 rotate-45 border-r-2 border-b-2 border-black -mt-1"></div>
+          </div>
+
+          <!-- Pulsing safe beacon halo behind the outlet -->
+          <div class="absolute -inset-1.5 rounded-md bg-amber-400/40 beacon-ring -z-10 pointer-events-none"></div>
+
+          <!-- Rescaled Cartoon Duplex Outlet SVG (True small-scale proportion to sofa) -->
+          <svg id="outlet-svg" class="w-9 h-14 md:w-10 md:h-16 drop-shadow transition-transform duration-200" viewBox="0 0 60 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Wallplate body -->
+            <rect x="2" y="2" width="56" height="88" rx="7" fill="#FDFBF7" stroke="#1E293B" stroke-width="3"/>
+            <rect x="5" y="5" width="50" height="82" rx="5" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1"/>
+            
+            <!-- Mounting screw in center -->
+            <circle cx="30" cy="46" r="2.5" fill="#94A3B8" stroke="#334155" stroke-width="1"/>
+            <line x1="28" y1="46" x2="32" y2="46" stroke="#1E293B" stroke-width="1"/>
+
+            <!-- Top Receptacle Circle -->
+            <circle cx="30" cy="24" r="16" fill="#FFFFFF" stroke="#334155" stroke-width="2"/>
+            <!-- Neutral slot (taller) -->
+            <rect id="top-left-slot" x="22.5" y="16" width="3.5" height="10" rx="1" fill="#0F172A" />
+            <!-- Hot slot -->
+            <rect id="top-right-slot" x="34" y="17" width="3.5" height="8.5" rx="1" fill="#0F172A" />
+            <!-- Ground slot (face mouth) -->
+            <path id="top-mouth" d="M26 30 C26 33 34 33 34 30 Z" fill="#0F172A" stroke="#0F172A" stroke-width="0.8"/>
+
+            <!-- Bottom Receptacle Circle -->
+            <circle cx="30" cy="68" r="16" fill="#FFFFFF" stroke="#334155" stroke-width="2"/>
+            <!-- Bottom neutral & hot slots -->
+            <rect id="bot-left-slot" x="22.5" y="60" width="3.5" height="10" rx="1" fill="#0F172A" />
+            <rect id="bot-right-slot" x="34" y="61" width="3.5" height="8.5" rx="1" fill="#0F172A" />
+            <path id="bot-mouth" d="M26 74 C26 77 34 77 34 74 Z" fill="#0F172A" stroke="#0F172A" stroke-width="0.8"/>
+
+            <!-- Cartoon Panic Sweat Drop -->
+            <g id="outlet-sweat" class="opacity-0 transition-opacity duration-200">
+              <path d="M50 20 C50 24 46 26 44 26 C42 26 39 24 41 20 C42 17 44 14 44 14 C44 14 50 16 50 20 Z" fill="#38BDF8" stroke="#0284C7" stroke-width="1.2"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Wooden Baseboard Trim -->
+      <div class="h-9 md:h-11 bg-amber-50 border-t-4 border-b-4 border-black relative flex items-center px-4">
+        <div class="w-full h-1.5 bg-amber-200/90 rounded-full"></div>
+      </div>
+
+      <!-- Hardwood Floor Grounding -->
+      <div id="floor" class="floor-wood h-36 md:h-40 w-full relative">
+        <div class="absolute bottom-2 left-6 right-6 h-1 bg-black/20 rounded-full"></div>
+      </div>
+
+      <!-- Large Scale Cartoon Sofa (Substantially larger than tiny wall outlet) -->
+      <div id="sofa-container" class="absolute z-20 left-10 top-60 select-none touch-none">
+        
+        <!-- Drag Handle Indicator badge -->
+        <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[11px] font-bold px-3 py-0.5 rounded-full border-2 border-black font-fun shadow-sm whitespace-nowrap pointer-events-none flex items-center gap-1">
+          <span>🖐️</span>
+          <span>DRAG THE SOFA</span>
+        </div>
+
+        <!-- Cartoon 2D Sofa SVG (Bold and chunky) -->
+        <svg id="sofa-svg" class="w-80 h-40 md:w-96 md:h-48 overflow-visible" viewBox="0 0 360 190" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Ambient shadow on the floor -->
+          <ellipse cx="180" cy="180" rx="155" ry="12" fill="rgba(0,0,0,0.35)" />
+
+          <!-- Left Wooden Leg -->
+          <polygon points="40,154 50,154 45,182 33,182" fill="#78350F" stroke="#1E1B4B" stroke-width="3.5" stroke-linejoin="round"/>
+          <!-- Right Wooden Leg -->
+          <polygon points="310,154 320,154 327,182 315,182" fill="#78350F" stroke="#1E1B4B" stroke-width="3.5" stroke-linejoin="round"/>
+          <!-- Middle Leg -->
+          <polygon points="176,154 184,154 184,180 176,180" fill="#78350F" stroke="#1E1B4B" stroke-width="3" stroke-linejoin="round"/>
+
+          <!-- Sofa Back Cushion Rest -->
+          <rect x="26" y="24" width="308" height="102" rx="30" fill="#3B82F6" stroke="#0F172A" stroke-width="5"/>
+          
+          <!-- Backrest pleats & buttons -->
+          <path d="M88 45 C88 70 88 80 88 92" stroke="#1D4ED8" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="88" cy="45" r="4.5" fill="#1E3A8A"/>
+          <path d="M148 45 C148 70 148 80 148 92" stroke="#1D4ED8" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="148" cy="45" r="4.5" fill="#1E3A8A"/>
+          <path d="M210 45 C210 70 210 80 210 92" stroke="#1D4ED8" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="210" cy="45" r="4.5" fill="#1E3A8A"/>
+          <path d="M270 45 C270 70 270 80 270 92" stroke="#1D4ED8" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="270" cy="45" r="4.5" fill="#1E3A8A"/>
+
+          <!-- Sturdy Base Frame -->
+          <rect x="30" y="118" width="300" height="42" rx="14" fill="#1D4ED8" stroke="#0F172A" stroke-width="5"/>
+
+          <!-- 3 Thick Cushions -->
+          <rect x="34" y="98" width="94" height="46" rx="13" fill="#60A5FA" stroke="#0F172A" stroke-width="4.5"/>
+          <rect x="132" y="98" width="96" height="46" rx="13" fill="#60A5FA" stroke="#0F172A" stroke-width="4.5"/>
+          <rect x="232" y="98" width="94" height="46" rx="13" fill="#60A5FA" stroke="#0F172A" stroke-width="4.5"/>
+
+          <!-- Left Pillowy Armrest -->
+          <rect x="12" y="60" width="36" height="96" rx="18" fill="#2563EB" stroke="#0F172A" stroke-width="5"/>
+          <path d="M23 75 C25 100 25 120 23 140" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Right Pillowy Armrest -->
+          <rect x="312" y="60" width="36" height="96" rx="18" fill="#2563EB" stroke="#0F172A" stroke-width="5"/>
+          <path d="M323 75 C325 100 325 120 323 140" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Cute Accent Pillow -->
+          <rect x="42" y="80" width="38" height="38" rx="10" fill="#FACC15" stroke="#0F172A" stroke-width="3.5" transform="rotate(-12 42 80)"/>
+          <line x1="49" y1="95" x2="71" y2="90" stroke="#CA8A04" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+    </div>
+
+    <!-- Live Status & Bottom Actions -->
+    <div class="w-full mt-4 flex flex-wrap items-center justify-between gap-3 bg-slate-800 p-4 rounded-2xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      <div class="flex items-center gap-3">
+        <button id="check-btn" class="bg-emerald-500 hover:bg-emerald-400 active:translate-y-1 active:shadow-none text-black font-fun text-sm md:text-base px-6 py-3 rounded-xl border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition flex items-center gap-2">
+          <span>⚡</span>
+          <span>Submit Placement</span>
+        </button>
+        <button id="reset-btn" class="bg-amber-400 hover:bg-amber-300 active:translate-y-1 active:shadow-none text-black font-fun text-sm md:text-base px-5 py-3 rounded-xl border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition flex items-center gap-2">
+          <span>🔄</span>
+          <span>Reset Sofa</span>
+        </button>
+      </div>
+
+      <!-- Real-Time Accessibility Indicator -->
+      <div class="flex items-center gap-2 bg-slate-900 border-2 border-slate-700 px-4 py-2 rounded-xl">
+        <div id="status-bulb" class="w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse"></div>
+        <span id="status-text" class="text-xs md:text-sm font-bold text-slate-200 uppercase tracking-wide">
+          Live Status: Clear & 100% Accessible
+        </span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Over-The-Top Feedback Dialog Modal -->
+  <div id="feedback-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div id="modal-card" class="bg-white max-w-xl w-full rounded-3xl border-6 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-6 md:p-8 transform transition-all duration-300 scale-90 opacity-0 relative overflow-hidden">
+      
+      <!-- Modal Top Banner -->
+      <div id="modal-banner" class="absolute -top-1 left-0 right-0 py-2.5 px-4 text-center font-fun text-sm uppercase tracking-widest border-b-4 border-black text-white">
+        EVALUATION RESULT
+      </div>
+
+      <!-- Modal Body -->
+      <div class="mt-6 flex flex-col items-center text-center">
+        <div id="modal-icon-badge" class="w-24 h-24 rounded-3xl border-4 border-black flex items-center justify-center text-5xl mb-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          🚨
+        </div>
+
+        <h2 id="modal-title" class="text-2xl md:text-3xl font-fun uppercase text-black leading-tight mb-2">
+          CRITICAL CODE VIOLATION!
+        </h2>
+
+        <!-- Dramatic Quote Box -->
+        <div id="modal-quote-box" class="w-full p-4 rounded-xl border-3 border-black my-2 text-left">
+          <p id="modal-quote" class="text-base md:text-lg font-bold text-slate-900 italic font-marker">
+            "You have suffocated the only wall outlet within a 5-mile radius. A smartphone battery just died in agony."
+          </p>
+        </div>
+
+        <!-- Diagnostic Text -->
+        <p id="modal-details" class="text-sm font-semibold text-slate-700 max-w-md mb-6">
+          Diagnostic: Severe obstruction detected. Electricity is currently barricaded behind 200 lbs of cushions.
+        </p>
+
+        <!-- Dismiss CTA Button -->
+        <div class="w-full">
+          <button id="modal-dismiss-btn" class="w-full bg-black hover:bg-slate-800 text-white font-fun py-3.5 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0px_0px_rgba(255,255,255,0.4)] active:translate-y-1 active:shadow-none transition text-center uppercase text-sm md:text-base">
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Sound Effects Engine (Synthesized via Web Audio API) */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playDisaster() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [105, 112, 210, 224];
+        freqs.forEach(freq => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.72, now + 0.7);
+
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.8);
+        });
+      }
+
+      playTriumph() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        
+        notes.forEach((freq, idx) => {
+          const noteTime = now + (idx * 0.11);
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, noteTime);
+
+          gain.gain.setValueAtTime(0, noteTime);
+          gain.gain.linearRampToValueAtTime(0.22, noteTime + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.65);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.7);
+        });
+      }
+
+      playSlide() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(75, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.09);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // DOM Elements
+    const roomViewport = document.getElementById('room-viewport');
+    const sofaContainer = document.getElementById('sofa-container');
+    const outletAnchor = document.getElementById('outlet-anchor');
+    const outletSvg = document.getElementById('outlet-svg');
+    const outletSweat = document.getElementById('outlet-sweat');
+    const statusBulb = document.getElementById('status-bulb');
+    const statusText = document.getElementById('status-text');
+    const checkBtn = document.getElementById('check-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    // Outlet facial features
+    const topMouth = document.getElementById('top-mouth');
+    const botMouth = document.getElementById('bot-mouth');
+
+    // Modal elements
+    const feedbackModal = document.getElementById('feedback-modal');
+    const modalCard = document.getElementById('modal-card');
+    const modalBanner = document.getElementById('modal-banner');
+    const modalIconBadge = document.getElementById('modal-icon-badge');
+    const modalTitle = document.getElementById('modal-title');
+    const modalQuote = document.getElementById('modal-quote');
+    const modalQuoteBox = document.getElementById('modal-quote-box');
+    const modalDetails = document.getElementById('modal-details');
+    const modalDismissBtn = document.getElementById('modal-dismiss-btn');
+
+    // Confetti canvas
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const confettiCtx = confettiCanvas.getContext('2d');
+    let confettiParticles = [];
+    let confettiActive = false;
+
+    // Draggable position state
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let sofaInitialLeft = 0;
+    let sofaInitialTop = 0;
+    let currentLeft = 24;
+    let currentTop = 230;
+
+    const defaultCoords = { x: 24, y: 230 };
+
+    function setSofaPosition(x, y) {
+      const roomRect = roomViewport.getBoundingClientRect();
+      const sofaRect = sofaContainer.getBoundingClientRect();
+
+      const maxX = roomRect.width - sofaRect.width - 6;
+      const minX = 6;
+      const maxY = roomRect.height - sofaRect.height - 8;
+      const minY = roomRect.height * 0.22;
+
+      currentLeft = Math.max(minX, Math.min(x, maxX));
+      currentTop = Math.max(minY, Math.min(y, maxY));
+
+      sofaContainer.style.left = `${currentLeft}px`;
+      sofaContainer.style.top = `${currentTop}px`;
+
+      evaluateProximityRealtime();
+    }
+
+    // Precision bounding collision calculation between Sofa and Outlet
+    function isOutletObscured() {
+      const sofaBox = sofaContainer.getBoundingClientRect();
+      const outletBox = outletAnchor.getBoundingClientRect();
+
+      const padding = 2;
+      return !(
+        sofaBox.right - padding < outletBox.left ||
+        sofaBox.left + padding > outletBox.right ||
+        sofaBox.bottom - padding < outletBox.top ||
+        sofaBox.top + padding > outletBox.bottom
+      );
+    }
+
+    function evaluateProximityRealtime() {
+      const obscured = isOutletObscured();
+
+      if (obscured) {
+        statusBulb.className = "w-3.5 h-3.5 rounded-full bg-red-500 shadow-[0_0_12px_#ef4444] animate-ping";
+        statusText.textContent = "CRITICAL: OUTLET SUFFOCATING!";
+        statusText.className = "text-xs md:text-sm font-extrabold text-red-400 uppercase tracking-wide";
+
+        outletSvg.classList.add('rotate-3');
+        outletSweat.classList.remove('opacity-0');
+        topMouth.setAttribute('d', 'M24 33 Q30 28 36 33'); // Frown
+        botMouth.setAttribute('d', 'M24 77 Q30 72 36 77'); // Frown
+      } else {
+        statusBulb.className = "w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse";
+        statusText.textContent = "Live Status: Clear & 100% Accessible";
+        statusText.className = "text-xs md:text-sm font-bold text-slate-200 uppercase tracking-wide";
+
+        outletSvg.classList.remove('rotate-3');
+        outletSweat.classList.add('opacity-0');
+        topMouth.setAttribute('d', 'M26 30 C26 33 34 33 34 30 Z');
+        botMouth.setAttribute('d', 'M26 74 C26 77 34 77 34 74 Z');
+      }
+    }
+
+    sofaContainer.addEventListener('pointerdown', (e) => {
+      sound.init();
+      isDragging = true;
+      sofaContainer.setPointerCapture(e.pointerId);
+
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+
+      const roomRect = roomViewport.getBoundingClientRect();
+      const sofaRect = sofaContainer.getBoundingClientRect();
+
+      sofaInitialLeft = sofaRect.left - roomRect.left;
+      sofaInitialTop = sofaRect.top - roomRect.top;
+
+      sofaContainer.style.transform = "scale(1.02)";
+      sound.playSlide();
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const deltaX = e.clientX - dragStartX;
+      const deltaY = e.clientY - dragStartY;
+
+      setSofaPosition(sofaInitialLeft + deltaX, sofaInitialTop + deltaY);
+    });
+
+    const stopDragging = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      try {
+        sofaContainer.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+      sofaContainer.style.transform = "scale(1)";
+    };
+
+    sofaContainer.addEventListener('pointerup', stopDragging);
+    sofaContainer.addEventListener('pointercancel', stopDragging);
+
+    const failQuotes = [
+      "CRITICAL PERMIT REVOCATION: You just entombed the only wall outlet. What now? Charge your phone with lemon slices and copper nails?!",
+      "CATASTROPHIC FAILURE: The International Union of Smart Charger Cables is weeping. You buried 120 volts of pure power behind 200 lbs of sofa.",
+      "THE OUTLET HAS SUFFOCATED! Code inspectors are crying uncontrollably. Move the couch before the fire marshal deploys emergency personnel.",
+      "TOTAL RESIDENTIAL ANARCHY: Cushion #3 has swallowed the outlet. Where does the vacuum cord go? Into the void?!",
+      "ZERO STARS: Guest phone battery sits at 1%. Outlet is trapped in couch purgatory. What have you done?!"
+    ];
+
+    const winQuotes = [
+      "INTERIOR DESIGN PRODIGY: 100% Watts Delivered! Phone chargers rejoice across the nation. You are an inspiration to humanity.",
+      "MAGNIFICENT ERGONOMIC HARMONY: The outlet breathes uninhibited oxygen! OSHA inspectors are wiping away tears of joy.",
+      "FLAWLESS VICTORY: Electrons flow without friction! Your phone will hit 100% while you lounge like royalty.",
+      "CERTIFIED ELECTRICIAN-APPROVED: Beautiful clearance zone. The vacuum cord reaches with ease. Take a bow!"
+    ];
+
+    function getRandomItem(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    checkBtn.addEventListener('click', () => {
+      const blocked = isOutletObscured();
+
+      if (blocked) {
+        sound.playDisaster();
+
+        roomViewport.classList.remove('shake-active');
+        void roomViewport.offsetWidth;
+        roomViewport.classList.add('shake-active');
+
+        modalBanner.className = "absolute -top-1 left-0 right-0 py-2.5 px-4 text-center font-fun text-sm uppercase tracking-widest border-b-4 border-black text-white bg-red-600";
+        modalBanner.textContent = "🚨 DISASTER IN PROGRESS: 1% BATTERY & ZERO ACCESS 🚨";
+
+        modalIconBadge.className = "w-24 h-24 rounded-3xl border-4 border-black flex items-center justify-center text-5xl mb-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-red-200 text-red-600";
+        modalIconBadge.textContent = "💀";
+
+        modalTitle.textContent = "THE OUTLET IS BURIED!";
+        modalTitle.className = "text-2xl md:text-3xl font-fun uppercase text-red-600 leading-tight mb-2";
+
+        modalQuoteBox.className = "w-full p-4 rounded-xl border-3 border-black my-2 bg-red-50";
+        modalQuote.textContent = getRandomItem(failQuotes);
+
+        modalDetails.innerHTML = `<span class="text-red-700 font-bold">Penalty:</span> Immediate 0% score. Moving this couch every night to plug in your 6ft iPhone cord will destroy your spine.`;
+        modalDismissBtn.textContent = "Repent & Move Sofa";
+        modalDismissBtn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-fun py-3.5 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 transition text-center uppercase";
+
+        showModal();
+      } else {
+        sound.playTriumph();
+        startConfetti();
+
+        modalBanner.className = "absolute -top-1 left-0 right-0 py-2.5 px-4 text-center font-fun text-sm uppercase tracking-widest border-b-4 border-black text-white bg-emerald-600";
+        modalBanner.textContent = "⚡ GENIUS ACCREDITED: PHONES SHALL CHARGE! ⚡";
+
+        modalIconBadge.className = "w-24 h-24 rounded-3xl border-4 border-black flex items-center justify-center text-5xl mb-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-emerald-200 text-emerald-600";
+        modalIconBadge.textContent = "🏆";
+
+        modalTitle.textContent = "OUTLET BREATHES FREELY!";
+        modalTitle.className = "text-2xl md:text-3xl font-fun uppercase text-emerald-600 leading-tight mb-2";
+
+        modalQuoteBox.className = "w-full p-4 rounded-xl border-3 border-black my-2 bg-emerald-50";
+        modalQuote.textContent = getRandomItem(winQuotes);
+
+        modalDetails.innerHTML = `<span class="text-emerald-700 font-bold">Result:</span> 100/100 Grade. Zero obstructed prongs. High-speed electron flow guaranteed.`;
+        modalDismissBtn.textContent = "Claim Certification & Replay";
+        modalDismissBtn.className = "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-fun py-3.5 px-6 rounded-xl border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 transition text-center uppercase";
+
+        showModal();
+      }
+    });
+
+    function showModal() {
+      feedbackModal.classList.remove('hidden');
+      setTimeout(() => {
+        modalCard.classList.remove('scale-90', 'opacity-0');
+        modalCard.classList.add('scale-100', 'opacity-100');
+      }, 20);
+    }
+
+    function hideModal() {
+      modalCard.classList.add('scale-90', 'opacity-0');
+      modalCard.classList.remove('scale-100', 'opacity-100');
+      setTimeout(() => {
+        feedbackModal.classList.add('hidden');
+      }, 200);
+      stopConfetti();
+    }
+
+    modalDismissBtn.addEventListener('click', hideModal);
+
+    resetBtn.addEventListener('click', () => {
+      sound.init();
+      sound.playSlide();
+      setSofaPosition(defaultCoords.x, defaultCoords.y);
+      stopConfetti();
+    });
+
+    function resizeCanvas() {
+      confettiCanvas.width = roomViewport.clientWidth;
+      confettiCanvas.height = roomViewport.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function startConfetti() {
+      confettiActive = true;
+      confettiParticles = [];
+      const colors = ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6'];
+      
+      for (let i = 0; i < 90; i++) {
+        confettiParticles.push({
+          x: Math.random() * confettiCanvas.width,
+          y: Math.random() * confettiCanvas.height - confettiCanvas.height,
+          size: Math.random() * 8 + 5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: (Math.random() - 0.5) * 4,
+          vy: Math.random() * 4 + 3,
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 8
+        });
+      }
+      renderConfetti();
+    }
+
+    function renderConfetti() {
+      if (!confettiActive) {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        return;
+      }
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+      confettiParticles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.rotationSpeed;
+
+        if (p.y > confettiCanvas.height) {
+          p.y = -10;
+          p.x = Math.random() * confettiCanvas.width;
+        }
+
+        confettiCtx.save();
+        confettiCtx.translate(p.x, p.y);
+        confettiCtx.rotate((p.rotation * Math.PI) / 180);
+        confettiCtx.fillStyle = p.color;
+        confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        confettiCtx.restore();
+      });
+
+      requestAnimationFrame(renderConfetti);
+    }
+
+    function stopConfetti() {
+      confettiActive = false;
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      resizeCanvas();
+      setSofaPosition(defaultCoords.x, defaultCoords.y);
+    });
+  </script>
+</body>
+</html>
